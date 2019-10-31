@@ -16,7 +16,7 @@ class ImageFragmentMakerForTrainingData extends JFrame implements ActionListener
         JFrame frame = new ImageFragmentMakerForTrainingData();
         
         frame.setTitle("ImageFragmentMaker");
-        frame.setBounds(500, 400, 700, 300);
+        frame.setBounds(500, 400, 600, 700);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setVisible(true);
     }
@@ -43,26 +43,47 @@ class ImageFragmentMakerForTrainingData extends JFrame implements ActionListener
         getContentPane().add(dataSource = new DataSourcePanel(), BorderLayout.NORTH);
 
         // 初期状態として2つの保存先を指定できるようにする
-        addDestinationPanel(myPanel);
-        addDestinationPanel(myPanel);
+        addDestinationPanel();
+        addDestinationPanel();
         // ベースパネルを追加
         getContentPane().add(myPanel, BorderLayout.WEST);
 
         // ボタン群初期化
         addDestination = new JButton("データ保存先追加");
+        addDestination.addActionListener(this);
+        addDestination.setActionCommand("addDest");
         deletDestination = new JButton("データ保存先削除");
+        deletDestination.addActionListener(this);
+        deletDestination.setActionCommand("deletDest");
         startMaking = new JButton("開始");
+        startMaking.addActionListener(this);
+        startMaking.setActionCommand("start");
         addButtons(bPanel);
         // ボタンパネルを追加
         getContentPane().add(bPanel, BorderLayout.SOUTH);
     }
 
     // ベースパネルに保存先パネルを追加
-    private void addDestinationPanel(JPanel p) {
-        p.setLayout(new BoxLayout(p, BoxLayout.PAGE_AXIS));
+    private void addDestinationPanel() {
+        // 保存先は10以上にはならない
+        if (destPanelNumber >= 10) return;
+
+        myPanel.setLayout(new BoxLayout(myPanel, BoxLayout.PAGE_AXIS));
         destPanel.add(new DestinationPanel(destPanelNumber+1));
-        p.add(destPanel.get(destPanelNumber));
+        myPanel.add(destPanel.get(destPanelNumber));
+        myPanel.revalidate();
         destPanelNumber++;
+    }
+
+    // ベースパネルから保存先パネルを削除
+    private void deleteDestinationPanel() {
+        // 保存先は2以下にならない
+        if (destPanelNumber <= 2) return;
+
+        myPanel.remove(destPanel.get(destPanelNumber-1));
+        destPanel.remove(destPanelNumber-1);
+        myPanel.revalidate();
+        destPanelNumber--;
     }
 
     // ボタン群追加
@@ -75,6 +96,18 @@ class ImageFragmentMakerForTrainingData extends JFrame implements ActionListener
 
     @Override
     public void actionPerformed(ActionEvent e) {
-        
+        String cmd = e.getActionCommand();
+        // データ保存先追加ボタン
+        if (cmd.equals("addDest")) {
+            addDestinationPanel();
+        }
+        // データ保存先削除ボタン
+        else if (cmd.equals("deletDest")) {
+            deleteDestinationPanel();
+        }
+        // 開始ボタン
+        else if (cmd.equals("start")) {
+
+        }
     }
 }

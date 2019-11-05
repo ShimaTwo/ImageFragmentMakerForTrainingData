@@ -54,6 +54,6 @@ class ImageFragmentation extends JFrame {
     }
 
     public void start() {
-
+        JFrame imageDisplay = new ImageDisplayFrame();
     }
 }

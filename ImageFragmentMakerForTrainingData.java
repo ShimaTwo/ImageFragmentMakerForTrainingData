@@ -9,8 +9,6 @@ import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 
-import javafx.scene.control.Button;
-
 class ImageFragmentMakerForTrainingData extends JFrame implements ActionListener {
     public static void main(String[] args) {
         JFrame frame = new ImageFragmentMakerForTrainingData();

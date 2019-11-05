@@ -16,7 +16,7 @@ class ImageFragmentMakerForTrainingData extends JFrame implements ActionListener
         JFrame frame = new ImageFragmentMakerForTrainingData();
         
         frame.setTitle("ImageFragmentMaker");
-        frame.setBounds(500, 400, 600, 700);
+        frame.setBounds(500, 400, 1000, 700);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setVisible(true);
     }
@@ -29,7 +29,7 @@ class ImageFragmentMakerForTrainingData extends JFrame implements ActionListener
     // データソースパネル
     DataSourcePanel dataSource;
     // 保存先パネル
-    ArrayList<JPanel> destPanel = new ArrayList<>();
+    ArrayList<DestinationPanel> destPanel = new ArrayList<>();
     int destPanelNumber;
     // メインダイアログボタン郡
     JButton addDestination;
@@ -94,6 +94,13 @@ class ImageFragmentMakerForTrainingData extends JFrame implements ActionListener
         p.add(startMaking);
     }
 
+    // ボタン群非アクティブ化
+    private void disableButtons() {
+        addDestination.setEnabled(false);
+        deletDestination.setEnabled(false);
+        startMaking.setEnabled(false);
+    }
+
     @Override
     public void actionPerformed(ActionEvent e) {
         String cmd = e.getActionCommand();
@@ -107,7 +114,18 @@ class ImageFragmentMakerForTrainingData extends JFrame implements ActionListener
         }
         // 開始ボタン
         else if (cmd.equals("start")) {
-
+            String dataSourcePath = dataSource.getTextFieldString();
+            ArrayList<String> destPaths = new ArrayList<>();
+            for (int i = 0; i < destPanelNumber; i++) {
+                DestinationPanel dest =  destPanel.get(i);
+                String path = dest.getDestTextFieldString();
+                destPaths.add(path);
+            }
+            ImageFragmentation imageFragmentation = new ImageFragmentation(dataSourcePath, destPaths);
+            if (imageFragmentation.dataPathCheck()) {
+                disableButtons();
+                imageFragmentation.start();
+            }
         }
     }
 }

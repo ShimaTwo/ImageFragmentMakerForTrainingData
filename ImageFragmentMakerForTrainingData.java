@@ -120,7 +120,7 @@ class ImageFragmentMakerForTrainingData extends JFrame implements ActionListener
                 destPaths.add(path);
             }
             ImageFragmentation imageFragmentation = new ImageFragmentation(dataSourcePath, destPaths);
-            if (imageFragmentation.dataPathCheck()) {
+            if (imageFragmentation.dataPathCheck(this)) {
                 disableButtons();
                 imageFragmentation.start();
             }

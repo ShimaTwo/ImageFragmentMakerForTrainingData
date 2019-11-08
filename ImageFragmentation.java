@@ -36,7 +36,7 @@ class ImageFragmentation {
     int fragmentIterateNumber = 0;
     ArrayList<BufferedImage> imageFragments;
     boolean ready = false;
-    Random rndSeed = new Random();
+    Random rndSeed = new Random(1234);
 
     int totalImage = 0;
     int totalFragmentationImage = 0;
@@ -90,6 +90,7 @@ class ImageFragmentation {
         displayNextFragImage();
         imageDisplay = new ImageDisplayFrame((JPanel)imageLabel, (JPanel)pathLabel, (JPanel)fileCount);
         imageDisplay.setImageFragmentation(this);
+        imageDisplay.setDestFileNumber(myDestFiles.length);
     }
 
     private void fragmentNextImage() {
@@ -146,7 +147,7 @@ class ImageFragmentation {
         String path = pathLabel.getPathString();
         String fileName = getFileNameFromFullPath(path);
         String saveFileName = fileName+"_"+fragmentIterateNumber+".png";
-        String saveFilePath = myDestFiles[destNumber] + saveFileName;
+        String saveFilePath = myDestFiles[destNumber] +"/"+ saveFileName;
         try {
             ImageIO.write(bDisplayed, "png", new File(saveFilePath));
         } catch (Exception e) {

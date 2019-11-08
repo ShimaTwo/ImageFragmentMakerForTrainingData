@@ -15,10 +15,11 @@ class ImageDisplayFrame extends JFrame implements ActionListener, WindowListener
     JPanel imageDisplay;
     JPanel fileCounter;
     JPanel pathDisplay;
+    int destFileNumber = 0;
     ImageFragmentation imageFragmentation;
     ImageDisplayFrame(JPanel image, JPanel path, JPanel count) {
         this.setTitle("Image");
-        this.setBounds(600, 500, 500, 500);
+        this.setBounds(600, 500, 700, 500);
         this.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
         this.addWindowListener(this);
         imageDisplay = image;
@@ -34,7 +35,10 @@ class ImageDisplayFrame extends JFrame implements ActionListener, WindowListener
     public void setImageFragmentation(ImageFragmentation imageFragmentation) {
         this.imageFragmentation = imageFragmentation;
     }
-    
+
+    public void setDestFileNumber(int num) {
+        destFileNumber = num;
+    }    
     @Override
     public void repaint() {
         super.repaint();
@@ -60,7 +64,26 @@ class ImageDisplayFrame extends JFrame implements ActionListener, WindowListener
     public void keyPressed(KeyEvent e) {
         int keycode = e.getKeyCode();
         if (keycode == KeyEvent.VK_ENTER) {
+        } else if ((keycode == KeyEvent.VK_1||keycode == KeyEvent.VK_NUMPAD1)&& 0 < destFileNumber) {
+            imageFragmentation.classificationImage(0);
+        } else if ((keycode == KeyEvent.VK_2||keycode == KeyEvent.VK_NUMPAD2) && 1 < destFileNumber) {
             imageFragmentation.classificationImage(1);
+        } else if ((keycode == KeyEvent.VK_3||keycode == KeyEvent.VK_NUMPAD3) && 2 < destFileNumber) {
+            imageFragmentation.classificationImage(2);
+        } else if ((keycode == KeyEvent.VK_4||keycode == KeyEvent.VK_NUMPAD4) && 3 < destFileNumber) {
+            imageFragmentation.classificationImage(3);
+        } else if ((keycode == KeyEvent.VK_5||keycode == KeyEvent.VK_NUMPAD5) && 4 < destFileNumber) {
+            imageFragmentation.classificationImage(4);
+        } else if ((keycode == KeyEvent.VK_6||keycode == KeyEvent.VK_NUMPAD6) && 5 < destFileNumber) {
+            imageFragmentation.classificationImage(5);
+        } else if ((keycode == KeyEvent.VK_7||keycode == KeyEvent.VK_NUMPAD7) && 6 < destFileNumber) {
+            imageFragmentation.classificationImage(6);
+        } else if ((keycode == KeyEvent.VK_8||keycode == KeyEvent.VK_NUMPAD8) && 7 < destFileNumber) {
+            imageFragmentation.classificationImage(7);
+        } else if ((keycode == KeyEvent.VK_9||keycode == KeyEvent.VK_NUMPAD9) && 8 < destFileNumber) {
+            imageFragmentation.classificationImage(8);
+        } else if ((keycode == KeyEvent.VK_0||keycode == KeyEvent.VK_NUMPAD0) && 9 < destFileNumber) {
+            imageFragmentation.classificationImage(9);
         }
     }
 

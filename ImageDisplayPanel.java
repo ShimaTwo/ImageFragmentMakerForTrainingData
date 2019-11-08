@@ -6,25 +6,39 @@ import javax.swing.JPanel;
 
 class ImageDisplayPanel extends JPanel {
     private JLabel icon;
+    private ImageIcon imageIcon;
     ImageDisplayPanel() {
         icon = new JLabel("");
+        imageIcon = null;
         add(icon);
     }
 
-    public void setImageIcon(ImageIcon image) {
-        icon.setIcon(image);
+    public void setImageIcon(ImageIcon imageIcon) {
+        this.imageIcon = imageIcon;
+        icon.setIcon(imageIcon);
+    }
+
+    public ImageIcon getDisplayedImage() {
+        return this.imageIcon;
     }
 }
 
 class ImageFilePathPanel extends JPanel {
     private JLabel filePathLabel;
+    private String pathString;
     ImageFilePathPanel() {
         filePathLabel = new JLabel("");
+        pathString = "";
         add(filePathLabel);
     }
 
     public void setFilePathLabel(String path) {
-        filePathLabel.setText(path);
+        pathString = path;
+        filePathLabel.setText(pathString);
+    }
+
+    public String getPathString() {
+        return this.pathString;
     }
 }
 

@@ -1,4 +1,5 @@
 import java.awt.BorderLayout;
+import java.awt.Graphics;
 import java.awt.Image;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
@@ -37,6 +38,8 @@ class ImageFragmentation {
     boolean ready = false;
     Random rndSeed = new Random();
 
+    int totalImage = 0;
+    int totalFragmentationImage = 0;
     ImageFragmentation(String dataSourcePath, ArrayList<String> destPaths) {
         // データソースパスと保存先パスを格納
         myDataPath = dataSourcePath;
@@ -92,6 +95,8 @@ class ImageFragmentation {
     private void fragmentNextImage() {
         if (!(iterateNumber < fileList.length)) {
             // 終了処理
+            JOptionPane.showMessageDialog(imageDisplay, totalImage +"枚の画像ファイルから"+ totalFragmentationImage +"枚の断片画像を生成/分類しました。");
+            System.exit(0);
         } else  {
             // カウント、パス表示
             fileCount.setFileCount(iterateNumber+1);
@@ -109,6 +114,7 @@ class ImageFragmentation {
                 if (bi != null) {
                     // 画像トリミング
                     imageFragments = ImageTrimming(bi);
+                    totalImage++;
                 } else {
                     // 画像じゃない
                 }
@@ -135,8 +141,43 @@ class ImageFragmentation {
 
     public void classificationImage(int destNumber) {
         // 今表示されている画像を分類、保存
+        Image iDisplayed = imageLabel.getDisplayedImage().getImage();
+        BufferedImage bDisplayed = changeImage2BufferedImage(iDisplayed);
+        String path = pathLabel.getPathString();
+        String fileName = getFileNameFromFullPath(path);
+        String saveFileName = fileName+"_"+fragmentIterateNumber+".png";
+        String saveFilePath = myDestFiles[destNumber] + saveFileName;
+        try {
+            ImageIO.write(bDisplayed, "png", new File(saveFilePath));
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(imageDisplay, saveFilePath+"の保存に失敗しました。");
+        }
         // 次の画像を表示
         displayNextFragImage();
+        totalFragmentationImage++;
+    }
+
+    private BufferedImage changeImage2BufferedImage(Image image) {
+        BufferedImage ret = new BufferedImage(image.getWidth(null), image.getHeight(null), BufferedImage.TYPE_INT_RGB);
+
+        Graphics g = ret.getGraphics();
+        g.drawImage(image, 0, 0, null);
+        g.dispose();
+
+        return ret;
+    }
+
+    private String getFileNameFromFullPath(String fullPath) {
+        File file = new File(fullPath);
+        String fileName = file.getName();
+        int dotIndex = fileName.lastIndexOf('.');
+        if (dotIndex!=-1) {
+            return fileName.substring(0, dotIndex);
+        } else {
+            JOptionPane.showMessageDialog(imageDisplay, "ファイル名なしの画像ファイルがありました。プログラムを終了します。");
+            System.exit(0);
+        }
+        return "";
     }
 
     private ArrayList<BufferedImage> ImageTrimming(BufferedImage image) {
@@ -144,7 +185,7 @@ class ImageFragmentation {
         int width = image.getWidth();
         int height = image.getHeight();
         int sumTrimmingArea = 0;
-        int trimmingMaxSideLength = Math.min(width, height)/2;
+        int trimmingMaxSideLength = Math.min(width, height)*2/3;
         int trimmingMinSideLength = trimmingMaxSideLength / 10;
         // 総トリミング面積が画像面積の二倍を越えるまでループ
         BufferedImage oneFragment = null;

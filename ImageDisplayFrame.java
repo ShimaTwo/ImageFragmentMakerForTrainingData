@@ -85,6 +85,10 @@ class ImageDisplayFrame extends JFrame implements ActionListener, WindowListener
         } else if ((keycode == KeyEvent.VK_0||keycode == KeyEvent.VK_NUMPAD0) && 9 < destFileNumber) {
             imageFragmentation.classificationImage(9);
         }
+
+        if (keycode == KeyEvent.VK_BACK_SPACE) {
+            imageFragmentation.undo();
+        }
     }
 
     @Override

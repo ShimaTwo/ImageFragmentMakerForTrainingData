@@ -6,6 +6,7 @@ import java.awt.event.KeyListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.sql.Struct;
 import java.util.ArrayList;
 import java.util.Random;
 
@@ -35,6 +36,8 @@ class ImageFragmentation {
     int iterateNumber = 0;
     int fragmentIterateNumber = 0;
     ArrayList<BufferedImage> imageFragments;
+    ArrayList<ImageInfo> historyStack;
+    ArrayList<ImageInfo> redoStack;
     boolean ready = false;
     Random rndSeed = new Random(1234);
 
@@ -49,6 +52,33 @@ class ImageFragmentation {
         for (int i = 0; i < myDestPaths.length; i++) {
             myDestPaths[i] = destPaths.get(i);
             myDestFiles[i] = new File(myDestPaths[i]);
+        }
+    }
+
+    private class ImageInfo {
+        String filePath;
+        Image image;
+        int fileNumber;
+        int fragmentNumber;
+        String fragFilePath;
+        ImageInfo(String path, Image image, int fileNumber, int fragmentNumber, String fragFilePath) {
+            this.filePath = path;
+            this.image = image;
+            this.fileNumber = fileNumber;
+            this.fragmentNumber = fragmentNumber;
+            this.fragFilePath = fragFilePath;
+        }
+    }
+
+    public void pushStack(String path, Image img, int a, int b, String fragPath) {
+        ImageInfo tmp = new ImageInfo(path, img, a, b, fragPath);
+        historyStack.add(tmp);
+    }
+
+    public void popStack() {
+        if (historyStack.size() > 0) {
+            redoStack.add(historyStack.get(historyStack.size()-1));
+            historyStack.remove(historyStack.size()-1);
         }
     }
 
@@ -86,6 +116,8 @@ class ImageFragmentation {
         imageLabel = new ImageDisplayPanel();
         pathLabel = new ImageFilePathPanel();
         fileCount = new ImageFileCountLabel(fileList.length);
+        historyStack = new ArrayList<>();
+        redoStack = new ArrayList<>();
         fragmentNextImage();
         displayNextFragImage();
         imageDisplay = new ImageDisplayFrame((JPanel)imageLabel, (JPanel)pathLabel, (JPanel)fileCount);
@@ -127,6 +159,17 @@ class ImageFragmentation {
     }
 
     public void displayNextFragImage() {
+        int redoStackSize = redoStack.size();
+        if (redoStackSize > 0) {
+            ImageInfo imgInf = redoStack.get(redoStackSize-1);
+            imageLabel.setImageIcon(new ImageIcon(imgInf.image));
+            imageLabel.revalidate();
+            fileCount.setFileCount(imgInf.fileNumber);
+            fileCount.revalidate();
+            pathLabel.setFilePathLabel(imgInf.filePath);
+            pathLabel.revalidate();
+            return;
+        }
         if (imageFragments == null || fragmentIterateNumber == imageFragments.size()) {
             fragmentNextImage();
             fragmentIterateNumber = 0;
@@ -148,6 +191,10 @@ class ImageFragmentation {
         String fileName = getFileNameFromFullPath(path);
         String saveFileName = fileName+"_"+fragmentIterateNumber+".png";
         String saveFilePath = myDestFiles[destNumber] +"/"+ saveFileName;
+        if (redoStack.size() > 0) {
+            redoStack.remove(redoStack.size()-1);
+        }
+        pushStack(path, iDisplayed, iterateNumber, fragmentIterateNumber, saveFilePath);
         try {
             ImageIO.write(bDisplayed, "png", new File(saveFilePath));
         } catch (Exception e) {
@@ -157,6 +204,17 @@ class ImageFragmentation {
         sleepNmilli(100);
         displayNextFragImage();
         totalFragmentationImage++;
+    }
+
+    public void undo() {
+        if (historyStack.size() > 0) {
+            String deleteFilePath = historyStack.get(historyStack.size()-1).fragFilePath;
+            File deleteFile = new File(deleteFilePath);
+            deleteFile.delete();
+            popStack();
+            displayNextFragImage();
+        }
+        return;
     }
 
     private BufferedImage changeImage2BufferedImage(Image image) {
@@ -187,9 +245,9 @@ class ImageFragmentation {
         int width = image.getWidth();
         int height = image.getHeight();
         int sumTrimmingArea = 0;
-        int trimmingMaxSideLength = Math.min(width, height)*2/3;
+        int trimmingMaxSideLength = Math.min(width, height) / 3;
         int trimmingMinSideLength = trimmingMaxSideLength / 10;
-        // 総トリミング面積が画像面積の二倍を越えるまでループ
+        // 総トリミング面積が画像面積を越えるまでループ
         BufferedImage oneFragment = null;
         do {
             int trimmingSideLength = rndSeed.nextInt(trimmingMaxSideLength-trimmingMinSideLength)+trimmingMinSideLength;
@@ -198,7 +256,7 @@ class ImageFragmentation {
             oneFragment = image.getSubimage(xCoor, yCoor, trimmingSideLength, trimmingSideLength);
             retArray.add(oneFragment);
             sumTrimmingArea = sumTrimmingArea + trimmingSideLength*trimmingSideLength;
-        } while (sumTrimmingArea < 2*width*height);
+        } while (sumTrimmingArea < width*height);
         return retArray;
     }
 

@@ -154,7 +154,6 @@ class ImageFragmentation {
             } else {
                 // ファイルじゃない
             }
-            iterateNumber++;
         }
     }
 
@@ -168,9 +167,13 @@ class ImageFragmentation {
             fileCount.revalidate();
             pathLabel.setFilePathLabel(imgInf.filePath);
             pathLabel.revalidate();
+            if (fragmentIterateNumber == imageFragments.size()) {
+                fragmentIterateNumber = 0;
+            }
             return;
         }
         if (imageFragments == null || fragmentIterateNumber == imageFragments.size()) {
+            iterateNumber++;
             fragmentNextImage();
             fragmentIterateNumber = 0;
             displayNextFragImage();
@@ -180,7 +183,10 @@ class ImageFragmentation {
         ImageIcon iconFragment = new ImageIcon(oneFragment);
         imageLabel.setImageIcon(iconFragment);
         imageLabel.revalidate();
-        fragmentIterateNumber++;
+        fileCount.setFileCount(iterateNumber+1);
+        fileCount.revalidate();
+        pathLabel.setFilePathLabel(fileList[iterateNumber].getAbsolutePath());
+        pathLabel.revalidate();
     }
 
     public void classificationImage(int destNumber) {
@@ -192,9 +198,12 @@ class ImageFragmentation {
         String saveFileName = fileName+"_"+fragmentIterateNumber+".png";
         String saveFilePath = myDestFiles[destNumber] +"/"+ saveFileName;
         if (redoStack.size() > 0) {
+            historyStack.add(redoStack.get(redoStack.size()-1));
             redoStack.remove(redoStack.size()-1);
+        } else {
+            fragmentIterateNumber++;
+            pushStack(path, iDisplayed, iterateNumber, fragmentIterateNumber, saveFilePath);            
         }
-        pushStack(path, iDisplayed, iterateNumber, fragmentIterateNumber, saveFilePath);
         try {
             ImageIO.write(bDisplayed, "png", new File(saveFilePath));
         } catch (Exception e) {
@@ -245,7 +254,7 @@ class ImageFragmentation {
         int width = image.getWidth();
         int height = image.getHeight();
         int sumTrimmingArea = 0;
-        int trimmingMaxSideLength = Math.min(width, height) / 3;
+        int trimmingMaxSideLength = Math.min(width, height) / 2;
         int trimmingMinSideLength = trimmingMaxSideLength / 10;
         // 総トリミング面積が画像面積を越えるまでループ
         BufferedImage oneFragment = null;

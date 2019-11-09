@@ -154,6 +154,7 @@ class ImageFragmentation {
             JOptionPane.showMessageDialog(imageDisplay, saveFilePath+"の保存に失敗しました。");
         }
         // 次の画像を表示
+        sleepNmilli(100);
         displayNextFragImage();
         totalFragmentationImage++;
     }
@@ -199,5 +200,13 @@ class ImageFragmentation {
             sumTrimmingArea = sumTrimmingArea + trimmingSideLength*trimmingSideLength;
         } while (sumTrimmingArea < 2*width*height);
         return retArray;
+    }
+
+    private void sleepNmilli (int n) {
+        try {
+            Thread.sleep(n);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 }

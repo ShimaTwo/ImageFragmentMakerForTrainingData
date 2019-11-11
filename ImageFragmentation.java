@@ -21,70 +21,63 @@ import javax.swing.JOptionPane;
 class ImageFragmentation {
 
     // Constructor
+    // フレーム・パネル
     private ImageDisplayFrame imageDisplay;
-    private JPanel imagePanel;
-    private File[] fileList;
-    private String myDataPath;
-    private File mySourceFile;
-    private String myDestPaths[];
+    ImageDisplayPanel imageLabelPanel;
+    ImageFilePathPanel pathLabelPanel;
+    ImageFileCountLabel fileCountPanel;
+
+    // ソースファイル・保存先ファイル
+    private File mySourceFile;    
     private File myDestFiles[];
 
-    ImageDisplayPanel imageLabel;
-    ImageFilePathPanel pathLabel;
-    ImageFileCountLabel fileCount;
+    // ソースファイルのファイルリスト
+    private File sourceFileList[];
 
-    int iterateNumber = 0;
-    int fragmentIterateNumber = 0;
+    // 画像情報の構造体配列
+    private ArrayList<ImageInfo> allImageInfo;
+    // 処理中のファイルインデックス
+    private int fileIndex;
+
+    // 断片画像の保存履歴
+    private ArrayList<FragImageSaveInfo> fragImagesSaveHistoryStack;
+    // 断片画像の通し番号
+    private int imageAllIndex;
+    // 処理中の画像インデックス
+    private int imageLocalIndex;
+
+    // 素画像1つから生成される断片画像群保存用
     ArrayList<BufferedImage> imageFragments;
-    ArrayList<ImageInfo> historyStack;
-    ArrayList<ImageInfo> redoStack;
-    boolean ready = false;
+
+    // 乱数シード
     Random rndSeed = new Random(1234);
 
     int totalImage = 0;
     int totalFragmentationImage = 0;
     ImageFragmentation(String dataSourcePath, ArrayList<String> destPaths) {
         // データソースパスと保存先パスを格納
-        myDataPath = dataSourcePath;
-        mySourceFile = new File(myDataPath);
-        myDestPaths = new String[destPaths.size()];
+        mySourceFile = new File(dataSourcePath);
         myDestFiles = new File[destPaths.size()];
-        for (int i = 0; i < myDestPaths.length; i++) {
-            myDestPaths[i] = destPaths.get(i);
-            myDestFiles[i] = new File(myDestPaths[i]);
+        for (int i = 0; i < myDestFiles.length; i++) {
+            myDestFiles[i] = new File(destPaths.get(i));
         }
+        // ソースファイルリストを初期化
+        sourceFileList = mySourceFile.listFiles();
+        // 画像情報の構造体配列を初期化
+        allImageInfo = new ArrayList<>();
+        // ファイルインデックスを初期化
+        fileIndex = 0;
+        // 保存履歴スタックの初期化
+        fragImagesSaveHistoryStack = new ArrayList<>();
+        // 画像インデックスを初期化
+        imageAllIndex = 0;
+        imageLocalIndex = 0;
     }
 
-    private class ImageInfo {
-        String filePath;
-        Image image;
-        int fileNumber;
-        int fragmentNumber;
-        String fragFilePath;
-        ImageInfo(String path, Image image, int fileNumber, int fragmentNumber, String fragFilePath) {
-            this.filePath = path;
-            this.image = image;
-            this.fileNumber = fileNumber;
-            this.fragmentNumber = fragmentNumber;
-            this.fragFilePath = fragFilePath;
-        }
-    }
-
-    public void pushStack(String path, Image img, int a, int b, String fragPath) {
-        ImageInfo tmp = new ImageInfo(path, img, a, b, fragPath);
-        historyStack.add(tmp);
-    }
-
-    public void popStack() {
-        if (historyStack.size() > 0) {
-            redoStack.add(historyStack.get(historyStack.size()-1));
-            historyStack.remove(historyStack.size()-1);
-        }
-    }
-
+    // パスチェック
     public boolean dataPathCheck(JFrame mainFrame) {
         // データソースパスのチェック
-        if (myDataPath.equals("")) {
+        if ((mySourceFile.getPath()).equals("")) {
             JLabel pathEmpty = new JLabel("データソースパスが空です。");
             JOptionPane.showMessageDialog(mainFrame, pathEmpty);
             return false;
@@ -96,8 +89,8 @@ class ImageFragmentation {
         }
 
         // データ保存先のチェック
-        for (int i = 0; i < myDestPaths.length; i++) {
-            if (myDestPaths[i].equals("")) {
+        for (int i = 0; i < myDestFiles.length; i++) {
+            if ((myDestFiles[i].getPath()).equals("")) {
                 JLabel pathEmpty = new JLabel("データ保存先パスが空です。");
                 JOptionPane.showMessageDialog(mainFrame, pathEmpty);
                 return false;
@@ -112,130 +105,130 @@ class ImageFragmentation {
     }
 
     public void start() {
-        fileList = mySourceFile.listFiles();
-        imageLabel = new ImageDisplayPanel();
-        pathLabel = new ImageFilePathPanel();
-        fileCount = new ImageFileCountLabel(fileList.length);
-        historyStack = new ArrayList<>();
-        redoStack = new ArrayList<>();
-        fragmentNextImage();
+        // パネル生成
+        imageLabelPanel = new ImageDisplayPanel();
+        pathLabelPanel = new ImageFilePathPanel();
+        fileCountPanel = new ImageFileCountLabel(sourceFileList.length);
+
+        // 画像情報生成
+        makeAllImageInfo();
+        imageFragments = fragmentNextImage();
+
+        // 画像情報をもとにパネルに表示
         displayNextFragImage();
-        imageDisplay = new ImageDisplayFrame((JPanel)imageLabel, (JPanel)pathLabel, (JPanel)fileCount);
+
+        // フレームを生成
+        imageDisplay = new ImageDisplayFrame((JPanel)imageLabelPanel, (JPanel)pathLabelPanel, (JPanel)fileCountPanel);
         imageDisplay.setImageFragmentation(this);
         imageDisplay.setDestFileNumber(myDestFiles.length);
     }
 
-    private void fragmentNextImage() {
-        if (!(iterateNumber < fileList.length)) {
+    // ソースファイルのファイルリストから画像生成に必要情報をスタック
+    private void makeAllImageInfo() {
+        for (int i = 0; i < sourceFileList.length; i++) {
+            String filePath = sourceFileList[i].getPath();
+            int seed = rndSeed.nextInt();
+            ImageInfo tmpInfo = new ImageInfo(filePath, seed);
+            allImageInfo.add(tmpInfo);
+        }
+    }
+
+    // パネルに画像情報を表示させる
+    private void displayNextFragImage() {
+        // パネル表示情報
+        ImageIcon icon = null;
+        int fileNumber = 0;
+        String filePath = null;
+        // ファイルリストを全て処理したか
+        if (sourceFileList.length == fileIndex) {
             // 終了処理
-            JOptionPane.showMessageDialog(imageDisplay, totalImage +"枚の画像ファイルから"+ totalFragmentationImage +"枚の断片画像を生成/分類しました。");
+            JOptionPane.showMessageDialog(imageDisplay, fileIndex +"枚の画像ファイルから"+ imageAllIndex +"枚の断片画像を生成/分類しました。");
             System.exit(0);
-        } else  {
-            // カウント、パス表示
-            fileCount.setFileCount(iterateNumber+1);
-            fileCount.revalidate();
-            pathLabel.setFilePathLabel(fileList[iterateNumber].getAbsolutePath());
-            pathLabel.revalidate();
-            // ファイルが存在するか
-            if (fileList[iterateNumber] != null && fileList[iterateNumber].isFile()) {
-                BufferedImage bi = null;
-                try {
-                    bi = ImageIO.read(fileList[iterateNumber]);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-                if (bi != null) {
-                    // 画像トリミング
-                    imageFragments = ImageTrimming(bi);
-                    totalImage++;
-                } else {
-                    // 画像じゃない
-                }
-            } else {
-                // ファイルじゃない
-            }
         }
-    }
-
-    public void displayNextFragImage() {
-        int redoStackSize = redoStack.size();
-        if (redoStackSize > 0) {
-            ImageInfo imgInf = redoStack.get(redoStackSize-1);
-            imageLabel.setImageIcon(new ImageIcon(imgInf.image));
-            imageLabel.revalidate();
-            fileCount.setFileCount(imgInf.fileNumber);
-            fileCount.revalidate();
-            pathLabel.setFilePathLabel(imgInf.filePath);
-            pathLabel.revalidate();
-            if (fragmentIterateNumber == imageFragments.size()) {
-                fragmentIterateNumber = 0;
-            }
-            return;
-        }
-        if (imageFragments == null || fragmentIterateNumber == imageFragments.size()) {
-            iterateNumber++;
-            fragmentNextImage();
-            fragmentIterateNumber = 0;
-            displayNextFragImage();
-            return;
-        }
-        Image oneFragment = imageFragments.get(fragmentIterateNumber).getScaledInstance(300, 300, Image.SCALE_DEFAULT);                        
-        ImageIcon iconFragment = new ImageIcon(oneFragment);
-        imageLabel.setImageIcon(iconFragment);
-        imageLabel.revalidate();
-        fileCount.setFileCount(iterateNumber+1);
-        fileCount.revalidate();
-        pathLabel.setFilePathLabel(fileList[iterateNumber].getAbsolutePath());
-        pathLabel.revalidate();
-    }
-
-    public void classificationImage(int destNumber) {
-        // 今表示されている画像を分類、保存
-        Image iDisplayed = imageLabel.getDisplayedImage().getImage();
-        BufferedImage bDisplayed = changeImage2BufferedImage(iDisplayed);
-        String path = pathLabel.getPathString();
-        String fileName = getFileNameFromFullPath(path);
-        String saveFileName = fileName+"_"+fragmentIterateNumber+".png";
-        String saveFilePath = myDestFiles[destNumber] +"/"+ saveFileName;
-        if (redoStack.size() > 0) {
-            historyStack.add(redoStack.get(redoStack.size()-1));
-            redoStack.remove(redoStack.size()-1);
+        // 表示できる断片画像があるかチェック
+        if (imageFragments.size() > imageLocalIndex && imageLocalIndex >= 0 && imageFragments!=null) {
+            // あればパネル表示のための情報を生成
+            Image oneFragmentImage = imageFragments.get(imageLocalIndex).getScaledInstance(300, 300, Image.SCALE_DEFAULT);
+            icon = new ImageIcon(oneFragmentImage);
+            fileNumber = fileIndex;
+            filePath = sourceFileList[fileIndex].getPath();
         } else {
-            fragmentIterateNumber++;
-            pushStack(path, iDisplayed, iterateNumber, fragmentIterateNumber, saveFilePath);            
-        }
-        try {
-            ImageIO.write(bDisplayed, "png", new File(saveFilePath));
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(imageDisplay, saveFilePath+"の保存に失敗しました。");
-        }
-        // 次の画像を表示
-        sleepNmilli(100);
-        displayNextFragImage();
-        totalFragmentationImage++;
-    }
-
-    public void undo() {
-        if (historyStack.size() > 0) {
-            String deleteFilePath = historyStack.get(historyStack.size()-1).fragFilePath;
-            File deleteFile = new File(deleteFilePath);
-            deleteFile.delete();
-            popStack();
+            // なければ断片画像を生成、補充してもう一度自身を呼び出す
+            if (imageFragments.size() == imageLocalIndex || imageFragments==null) {
+                // 進めていった結果断片画像のストックがなくなった場合
+                fileIndex++;
+                imageFragments = fragmentNextImage();
+                imageLocalIndex = 0;
+            } else {
+                // 戻った結果ローカルナンバーがマイナスになった場合
+                fileIndex--;
+                imageFragments = fragmentNextImage();
+                imageLocalIndex = imageFragments.size()-1;
+            }
             displayNextFragImage();
+            return;
         }
-        return;
+        // パネルに反映
+        imageLabelPanel.setImageIcon(icon);
+        imageLabelPanel.revalidate();
+        fileCountPanel.setFileCount(fileNumber);
+        fileCountPanel.revalidate();
+        pathLabelPanel.setFilePathLabel(filePath);
+        pathLabelPanel.revalidate();
     }
 
-    private BufferedImage changeImage2BufferedImage(Image image) {
-        BufferedImage ret = new BufferedImage(image.getWidth(null), image.getHeight(null), BufferedImage.TYPE_INT_RGB);
-
-        Graphics g = ret.getGraphics();
-        g.drawImage(image, 0, 0, null);
-        g.dispose();
-
-        return ret;
+    // 1ファイルから画像を読み込んでトリミング画像群を返す
+    private ArrayList<BufferedImage> fragmentNextImage() {
+        ArrayList<BufferedImage> imageFragments = null;
+        File file = new File(allImageInfo.get(fileIndex).originalFilePath);
+        // ファイルが存在するか
+        if (file != null && file.isFile()) {
+            // 画像読み込み
+            BufferedImage bi = null;
+            try {
+                bi = ImageIO.read(file);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            if (bi != null) {
+                // 画像トリミング
+                imageFragments = ImageTrimming(bi);
+                totalImage++;
+            } else {
+                // 画像じゃない
+            }
+        } else {
+            // ファイルじゃない
+        }
+        return imageFragments;
     }
 
+    // 画像をトリミングする
+    private ArrayList<BufferedImage> ImageTrimming(BufferedImage image) {
+        ArrayList<BufferedImage> retArray = new ArrayList<BufferedImage>();
+        // 画像の縦横
+        int width = image.getWidth();
+        int height = image.getHeight();
+        // トリミングした総面積
+        int totalTrimmingArea = 0;
+        // トリミングサイズの最大最小を設定
+        int trimmingMaxSideLength = Math.min(width, height) / 2;
+        int trimmingMinSideLength = trimmingMaxSideLength / 10;
+        // 総トリミング面積が画像面積を越えるまでループ
+        Random localRnd = new Random(allImageInfo.get(fileIndex).randomSeed);
+        BufferedImage oneFragment = null;
+        do {
+            int trimmingSideLength = localRnd.nextInt(trimmingMaxSideLength-trimmingMinSideLength)+trimmingMinSideLength;
+            int xCoor = localRnd.nextInt(width-trimmingSideLength);
+            int yCoor = localRnd.nextInt(height-trimmingSideLength);
+            oneFragment = image.getSubimage(xCoor, yCoor, trimmingSideLength, trimmingSideLength);
+            retArray.add(oneFragment);
+            totalTrimmingArea = totalTrimmingArea + trimmingSideLength*trimmingSideLength;
+        } while (totalTrimmingArea < width*height);
+        return retArray;
+    }
+
+    // フルパスから末尾の拡張子なしのファイルネームだけを取得する
     private String getFileNameFromFullPath(String fullPath) {
         File file = new File(fullPath);
         String fileName = file.getName();
@@ -248,25 +241,52 @@ class ImageFragmentation {
         }
         return "";
     }
+    
+    // 分類を行ってimageIndexを加算
+    public void classificationImage(int destNumber) {   
+        // パネルに表示されている画像を取得してBufferedImage型に変換
+        Image iDisplayed = imageLabelPanel.getDisplayedImage().getImage();
+        BufferedImage bDisplayed = changeImage2BufferedImage(iDisplayed);
+        String originalFilePath = allImageInfo.get(fileIndex).originalFilePath;
+        String originalFileName = getFileNameFromFullPath(originalFilePath);
+        String saveFilePath = myDestFiles[destNumber].getPath() + "/" + originalFileName + "_"+ imageLocalIndex +".png";
+        try {
+            ImageIO.write(bDisplayed, "png", new File(saveFilePath));
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(imageDisplay, saveFilePath+"の保存に失敗しました。");
+        }
+        // 画像情報の保存先情報を更新
+        FragImageSaveInfo info = new FragImageSaveInfo(saveFilePath, imageAllIndex);
+        fragImagesSaveHistoryStack.add(info);
+        // imageIndexを加算して次の画像を表示
+        sleepNmilli(100);
+        imageLocalIndex++;
+        imageAllIndex++;
+        displayNextFragImage();
+    }
 
-    private ArrayList<BufferedImage> ImageTrimming(BufferedImage image) {
-        ArrayList<BufferedImage> retArray = new ArrayList<BufferedImage>();
-        int width = image.getWidth();
-        int height = image.getHeight();
-        int sumTrimmingArea = 0;
-        int trimmingMaxSideLength = Math.min(width, height) / 2;
-        int trimmingMinSideLength = trimmingMaxSideLength / 10;
-        // 総トリミング面積が画像面積を越えるまでループ
-        BufferedImage oneFragment = null;
-        do {
-            int trimmingSideLength = rndSeed.nextInt(trimmingMaxSideLength-trimmingMinSideLength)+trimmingMinSideLength;
-            int xCoor = rndSeed.nextInt(width-trimmingSideLength);
-            int yCoor = rndSeed.nextInt(height-trimmingSideLength);
-            oneFragment = image.getSubimage(xCoor, yCoor, trimmingSideLength, trimmingSideLength);
-            retArray.add(oneFragment);
-            sumTrimmingArea = sumTrimmingArea + trimmingSideLength*trimmingSideLength;
-        } while (sumTrimmingArea < width*height);
-        return retArray;
+    public void undo() {
+        // 画像情報インデックスを一つ戻す
+        imageAllIndex--;
+        imageLocalIndex--;
+
+        // 保存した画像を削除する
+        File deleteFile = new File(fragImagesSaveHistoryStack.get(fragImagesSaveHistoryStack.size()-1).savePath);
+        deleteFile.delete();
+        // 保存スタックの末尾を削除する
+        fragImagesSaveHistoryStack.remove(fragImagesSaveHistoryStack.size()-1);
+        // パネルに表示
+        displayNextFragImage();
+    }
+
+    private BufferedImage changeImage2BufferedImage(Image image) {
+        BufferedImage ret = new BufferedImage(image.getWidth(null), image.getHeight(null), BufferedImage.TYPE_INT_RGB);
+
+        Graphics g = ret.getGraphics();
+        g.drawImage(image, 0, 0, null);
+        g.dispose();
+
+        return ret;
     }
 
     private void sleepNmilli (int n) {
@@ -274,6 +294,26 @@ class ImageFragmentation {
             Thread.sleep(n);
         } catch (InterruptedException e) {
             e.printStackTrace();
+        }
+    }
+
+    // 断片画像保存用の構造体
+    private class FragImageSaveInfo {
+        String savePath;
+        int saveNumber;
+        FragImageSaveInfo (String path, int num) {
+            this.savePath = path;
+            this.saveNumber = num;
+        }
+    }
+
+    // 素画像から断片画像を生成するための情報の構造体
+    private class ImageInfo {
+        String        originalFilePath;
+        int           randomSeed;
+        ImageInfo(String originalPath, int seed) {
+            this.originalFilePath = originalPath;
+            this.randomSeed = seed;
         }
     }
 }

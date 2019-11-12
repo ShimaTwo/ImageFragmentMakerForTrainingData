@@ -112,7 +112,12 @@ class ImageFragmentation {
 
         // 画像情報生成
         makeAllImageInfo();
-        imageFragments = fragmentNextImage();
+        // ナルでなくなるまで断片画像を生成
+        while (true) {
+            imageFragments = fragmentNextImage();
+            if (imageFragments != null || fileIndex == sourceFileList.length) break;
+            fileIndex++;
+        }
 
         // 画像情報をもとにパネルに表示
         displayNextFragImage();
@@ -139,14 +144,15 @@ class ImageFragmentation {
         ImageIcon icon = null;
         int fileNumber = 0;
         String filePath = null;
-        // ファイルリストを全て処理したか
-        if (sourceFileList.length == fileIndex) {
+        // ファイルリストを全て処理したか(fileIndexは断片画像を生成する直前でインクリメントしているので、全部処理したかのチェック時は+1する)
+        /*
+        if (sourceFileList.length <= fileIndex) {
             // 終了処理
             JOptionPane.showMessageDialog(imageDisplay, fileIndex +"枚の画像ファイルから"+ imageAllIndex +"枚の断片画像を生成/分類しました。");
             System.exit(0);
-        }
+        }*/
         // 表示できる断片画像があるかチェック
-        if (imageFragments.size() > imageLocalIndex && imageLocalIndex >= 0 && imageFragments!=null) {
+        if (imageFragments.size() > imageLocalIndex && imageLocalIndex >= 0) {
             // あればパネル表示のための情報を生成
             Image oneFragmentImage = imageFragments.get(imageLocalIndex).getScaledInstance(300, 300, Image.SCALE_DEFAULT);
             icon = new ImageIcon(oneFragmentImage);
@@ -154,15 +160,30 @@ class ImageFragmentation {
             filePath = sourceFileList[fileIndex].getPath();
         } else {
             // なければ断片画像を生成、補充してもう一度自身を呼び出す
-            if (imageFragments.size() == imageLocalIndex || imageFragments==null) {
+            if (imageFragments.size() == imageLocalIndex) {
                 // 進めていった結果断片画像のストックがなくなった場合
-                fileIndex++;
-                imageFragments = fragmentNextImage();
+                // ナルチェックをしつつ次のファイルの断片画像を生成する
+                do {
+                    fileIndex++;
+                    if (sourceFileList.length <= fileIndex) {
+                        // 終了処理
+                        JOptionPane.showMessageDialog(imageDisplay, fileIndex +"枚の画像ファイルから"+ imageAllIndex +"枚の断片画像を生成/分類しました。");
+                        System.exit(0);
+                    }
+                    imageFragments = fragmentNextImage();
+                } while (imageFragments==null);
                 imageLocalIndex = 0;
             } else {
                 // 戻った結果ローカルナンバーがマイナスになった場合
-                fileIndex--;
-                imageFragments = fragmentNextImage();
+                // ナルチェックをしつつ前の画像の断片画像を生成する
+                do {
+                    fileIndex--;
+                    imageFragments = fragmentNextImage();
+                    if (fileIndex == 0) {
+                        // 最初からやり直し
+                        start();
+                    }
+                } while (imageFragments==null);
                 imageLocalIndex = imageFragments.size()-1;
             }
             displayNextFragImage();
@@ -171,7 +192,7 @@ class ImageFragmentation {
         // パネルに反映
         imageLabelPanel.setImageIcon(icon);
         imageLabelPanel.revalidate();
-        fileCountPanel.setFileCount(fileNumber);
+        fileCountPanel.setFileCount(fileNumber+1);
         fileCountPanel.revalidate();
         pathLabelPanel.setFilePathLabel(filePath);
         pathLabelPanel.revalidate();
@@ -196,9 +217,11 @@ class ImageFragmentation {
                 totalImage++;
             } else {
                 // 画像じゃない
+                System.out.println("Not a Image !!");
             }
         } else {
             // ファイルじゃない
+            System.out.println("Not a File !!");
         }
         return imageFragments;
     }
@@ -213,7 +236,7 @@ class ImageFragmentation {
         int totalTrimmingArea = 0;
         // トリミングサイズの最大最小を設定
         int trimmingMaxSideLength = Math.min(width, height) / 2;
-        int trimmingMinSideLength = trimmingMaxSideLength / 10;
+        int trimmingMinSideLength = trimmingMaxSideLength / 8;
         // 総トリミング面積が画像面積を越えるまでループ
         Random localRnd = new Random(allImageInfo.get(fileIndex).randomSeed);
         BufferedImage oneFragment = null;
@@ -259,7 +282,7 @@ class ImageFragmentation {
         FragImageSaveInfo info = new FragImageSaveInfo(saveFilePath, imageAllIndex);
         fragImagesSaveHistoryStack.add(info);
         // imageIndexを加算して次の画像を表示
-        sleepNmilli(100);
+        // sleepNmilli(100);
         imageLocalIndex++;
         imageAllIndex++;
         displayNextFragImage();
@@ -267,8 +290,12 @@ class ImageFragmentation {
 
     public void undo() {
         // 画像情報インデックスを一つ戻す
-        imageAllIndex--;
-        imageLocalIndex--;
+        if (imageAllIndex > 0) {
+            imageAllIndex--;
+            imageLocalIndex--;
+        } else {
+            return;
+        }
 
         // 保存した画像を削除する
         File deleteFile = new File(fragImagesSaveHistoryStack.get(fragImagesSaveHistoryStack.size()-1).savePath);
